@@ -29,31 +29,6 @@ class CRUDLogin:
         return db.query(User).filter(User.username == email).first()
     
 
-    # def forgot_password(self, db: Session, params):
-    #     company_id = self.check_valid_company(db, params.email)
-    #     if not company_id:
-    #         return {'success': False, 'msg': 'Email Does Not Exist'}
-    #     validity = datetime.utcnow() + timedelta(minutes=settings.OTP_VALIDITY_MINUTES)
-    #     db.query(CompanyOTP).filter(CompanyOTP.email == params.email).delete()
-    #     otp = generate_random_number(6)
-    #     otp_id = CompanyOTP(**{'email': params.email, 'otp': otp, 'valid_until': validity})
-    #     db.add(otp_id)
-    #     db.commit()
-    #     db.refresh(otp_id)
-    #     sendgrid_client = SendGridAPIClient(api_key=settings.SENDGRID_API_KEY)
-    #     with open('mail-templates/forgot_password_mail.html') as f:
-    #         html_text = f.read()
-    #         html_text = html_text.replace('{CUSTOMER_NAME}', company_id.company_name).replace('{OTP}', otp_id.otp)
-    #         html_content = HtmlContent(html_text)
-    #         soup = BeautifulSoup(html_text, features="lxml")
-    #         plain_text = soup.get_text()
-    #         plain_text_content = Content("text/plain", plain_text)
-    #     mail = Mail(Email(settings.SENDGRID_FROM_ACCOUNT), To(company_id.business_email),
-    #                 "iera Reset Password - One Time Password", plain_text_content, html_content)
-    #     sendgrid_client.send(message=mail)
-    #     _logger.info("Login Forgot Password Mail Sent")
-    #     return {'success': True, 'msg': 'OTP Generated and Sent Successfully'}
-
     def generate_otp(self, db: Session, params):
         validity = datetime.utcnow() + timedelta(minutes=settings.OTP_VALIDITY_MINUTES)
         db.query(UserOTP).filter(UserOTP.email == params.email).delete()
@@ -62,37 +37,58 @@ class CRUDLogin:
         db.add(otp_id)
         db.commit()
         db.refresh(otp_id)
-        # sendgrid_client = SendGridAPIClient(api_key=settings.SENDGRID_API_KEY)
-        # with open('mail-templates/welcome_mail.html') as f:
-        #     html_text = f.read()
-        #     html_text = html_text.replace('{OTP}', otp_id.otp)
-        #     html_content = HtmlContent(html_text)
-        #     soup = BeautifulSoup(html_text, features="lxml")
-        #     plain_text = soup.get_text()
-        #     plain_text_content = Content("text/plain", plain_text)
-        # mail = Mail(Email(settings.SENDGRID_FROM_ACCOUNT), To(params.email),
-        #             "iera Verify Account - One Time Password", plain_text_content, html_content)
-        # sendgrid_client.send(message=mail)
+        
         _logger.info("Login Generate OTP Mail Sent")
         return {'success': True, 'msg': 'OTP Generated and Sent Successfully', 'data': {'otp': otp}}
+    
+
+    # def authenticate(self, db: Session, params) -> dict:
+    #     user_id = self.check_valid_user(db, params.email)
+    #     if not user_id:
+    #         return {'success': False, 'msg': 'Email Does Not Exist'}
+    #     if not verify_password(params.password, user_id.password_hash):
+    #         return {'success': False, 'msg': 'Invalid password'}
+    #     return {
+    #         'success': True,
+    #         'msg': 'Logged in successfully',
+    #         'data': {
+    #             'access_token': security.create_access_token(
+    #                 user_id.access_token,
+    #                 expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    #             ),
+    #             'username': user_id.username,
+    #             'status': user_id.status, 
+    #             'role': user_id.role, 
+    #             'token_type': 'bearer'
+    #         }
+    #     }
+
 
     def authenticate(self, db: Session, params) -> dict:
         user_id = self.check_valid_user(db, params.email)
         if not user_id:
             return {'success': False, 'msg': 'Email Does Not Exist'}
-        if not verify_password(params.password, user_id.password_hash):
-            return {'success': False, 'msg': 'Invalid password'}
+        otp_obj = db.query(UserOTP).filter(UserOTP.email == params.email).first()
+        if not otp_obj:
+            return {'success': False, 'msg': 'Otp is not valid or not exist'}
+        if params.otp != otp_obj.otp:
+            return {'success': False, 'msg': 'Otp is not valid'}
+        if datetime.utcnow() > otp_obj.valid_until:
+            return {'success': False, 'msg': 'Otp Timeout, So it is not valid'}
+        db.query(UserOTP).filter(UserOTP.email == params.email).delete()
+        user_id.verified = True
+        db.commit()
         return {
             'success': True,
-            'msg': 'Logged in successfully',
+            'msg': 'Logged in successfully with OTP',
             'data': {
                 'access_token': security.create_access_token(
                     user_id.access_token,
                     expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
                 ),
                 'username': user_id.username,
-                'status': user_id.status.value, 
-                'role': user_id.role.value, 
+                'status': user_id.status,
+                'role': user_id.role,
                 'token_type': 'bearer'
             }
         }
@@ -100,17 +96,18 @@ class CRUDLogin:
     def register(self, db: Session, params) -> dict:
         user_id = self.check_valid_user(db, params.email)
         if user_id:
-            return {'success': False, 'msg': 'Email Already Exist'}
-        password_hash = get_password_hash(params.password)
+            otp = self.generate_otp(db, params)
+            return {'success': True, 'msg': 'Login Generate OTP Mail Sent', 'data': {'otp': otp.get('data').get('otp')}}
+        password_hash = get_password_hash("test")
         user_obj = User(username=params.email, password_hash=password_hash, 
-                        role=UserRole.CUSTOMER, status=StatusEnum.ACTIVE)
+                        role="customer", status="active")
         db.add(user_obj)
         db.commit()
         if user_obj:
             user_obj.access_token = f"{uuid4()}_{user_obj.id}"
             db.commit()
             customer_obj = Customer(user_id=user_obj.id, phone=params.phone, email=params.email,
-                                    status=StatusEnum.ACTIVE)
+                                    status="active")
             db.add(customer_obj)
             db.commit()
             otp = self.generate_otp(db, params)
@@ -134,57 +131,6 @@ class CRUDLogin:
         db.commit()
         return {'success': True, "msg": "Email Verified in successfully"}
 
-    # def verify_forgot_password_otp(self, db: Session, params) -> dict:
-    #     company_id = self.check_valid_company(db, params.email)
-    #     if not company_id:
-    #         return {'success': False, 'msg': 'Email Does Not Exist'}
-    #     otp_obj = db.query(CompanyOTP).filter(CompanyOTP.email == params.email).first()
-    #     if not otp_obj:
-    #         return {'success': False, 'msg': 'Otp is not valid or not exist'}
-    #     if params.otp != otp_obj.otp:
-    #         return {'success': False, 'msg': 'Otp is not valid'}
-    #     if datetime.utcnow() > otp_obj.valid_until:
-    #         return {'success': False, 'msg': 'Otp Timeout, So it is not valid'}
-    #     db.query(CompanyOTP).filter(CompanyOTP.email == params.email).delete()
-    #     db.commit()
-    #     return {'success': True, "msg": "Email Verified in successfully", 'data': {
-    #         'access_token': security.create_access_token(company_id.access_token, expires_delta=timedelta(
-    #             minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)), 'token_type': 'bearer'}}
-
-    # def verify_otp_email(self, db: Session, params):
-    #     company_id = self.check_valid_company(db, params.email)
-    #     if not company_id:
-    #         return {'success': False, 'msg': 'Email Does Not Exist'}
-    #     otp_obj = db.query(CompanyOTP).filter(CompanyOTP.email == params.email).first()
-    #     if not otp_obj:
-    #         return {'success': False, 'msg': 'Otp is not valid or not exist'}
-    #     if params.otp != otp_obj.otp:
-    #         return {'success': False, 'msg': 'Otp is not valid'}
-    #     if datetime.utcnow() > otp_obj.valid_until:
-    #         return {'success': False, 'msg': 'Otp Timeout, So it is not valid'}
-    #     db.query(CompanyOTP).filter(CompanyOTP.email == params.email).delete()
-    #     db.commit()
-    #     return {'success': True, "msg": "Email Verified in successfully", 'data': {
-    #         'access_token': security.create_access_token(company_id.access_token, expires_delta=timedelta(
-    #             minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)),
-    #         'token_type': 'bearer'
-    #     }}
-
-    # def reset_password(self, db: Session, current_company, params):
-    #     if not verify_password(params.old_password, current_company.password_hash):
-    #         return {'success': False, 'msg': 'Invalid current password'}
-    #     new_password_hash = get_password_hash(params.new_password)
-    #     current_company.password_hash = new_password_hash
-    #     db.commit()
-    #     db.refresh(current_company)
-    #     return {'success': True, 'msg': 'Password Set Successfully'}
-
-    # def set_password(self, db: Session, current_company, params):
-    #     new_password_hash = get_password_hash(params.password)
-    #     current_company.password_hash = new_password_hash
-    #     db.commit()
-    #     db.refresh(current_company)
-    #     return {'success': True, 'msg': 'Password Changed Successfully'}
 
 
 login = CRUDLogin()

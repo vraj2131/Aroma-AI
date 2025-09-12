@@ -5,13 +5,12 @@ from pydantic import BaseModel, EmailStr
 
 class Login(BaseModel):
     email: EmailStr
-    password: str
+    otp: str
 
 
 class Register(BaseModel):
     phone: str
     email: EmailStr
-    password: str
 
 
 class VerifyOtp(BaseModel):

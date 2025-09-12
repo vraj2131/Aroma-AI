@@ -1,8 +1,6 @@
+# app/models/status_base.py
 import enum as PyEnum
 
-# ---------------------------
-# ENUMS
-# ---------------------------
 class UserRole(PyEnum.Enum):
     ADMIN = "admin"
     MANAGER = "manager"
@@ -12,7 +10,6 @@ class UserRole(PyEnum.Enum):
 class StatusEnum(PyEnum.Enum):
     ACTIVE = "active"
     INACTIVE = "inactive"
-    
 
 class OrderStatusEnum(PyEnum.Enum):
     PENDING = "pending"
