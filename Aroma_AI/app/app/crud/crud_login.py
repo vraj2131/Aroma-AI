@@ -110,6 +110,9 @@ class CRUDLogin:
                                     status="active")
             db.add(customer_obj)
             db.commit()
+            if customer_obj:
+                customer_obj.access_token = f"{uuid4()}_{customer_obj.id}"
+                db.commit()
             otp = self.generate_otp(db, params)
         db.refresh(user_obj)
         return {'success': True, 'msg': 'User Registered Successfully', 'data': {'otp': otp.get('data').get('otp')}}
