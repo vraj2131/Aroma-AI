@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.env
+.idea/
+sklearndb/
+app/app/files/
+app/app/credentials.json
+app/alembic/versions
+venv
+env/
+celerybeat-schedule
+sentence-transformers-cache/
+celerybeat-schedule.db
+app/app/google-drive-keys
