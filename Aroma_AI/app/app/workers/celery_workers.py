@@ -1,3 +1,51 @@
+from datetime import date
+from sqlalchemy import func
+# import torch.multiprocessing as mp # Set the multiprocessing start method to 'spawn' for GPU support
+from celery import Celery
+import os
+import sys
+sys.path.append('../../')
+
+import tempfile
+import logging
+from app.loader.utils import get_loader
+from app.vector_store.pgvector_langchain import VectorStorePostgresVector
+from app.embeddings.embedding import huggingface_embeddings
+from app.utils.doc_summary import get_summary_data
+from app.utils.chat_services import chat_obj
+from app.core.config import settings
+from app.crud.crud_chat import qna
+from app.db.session import get_db
+from app.models.chat import ChatData
+
+_logger = logging.getLogger(__name__)
+celery = Celery('tasks', broker=f'redis://{settings.REDIS_HOST}:6379/{settings.REDIS_DB}',backend=f'redis://{settings.REDIS_HOST}:6379/{settings.REDIS_DB}')
+
+
+@celery.task(name="upload_document", autoretry_for=(Exception,), retry_backoff=3)
+def upload_document(file_path: str, document_id, user_id):
+    """
+    A Celery task to download a document from S3, extract its data, and store it in a PostgreSQL vector store.
+    Retries are enabled in case of failure.
+
+#     :param file_path: path from file will be downloaded.
+#     :param document_id: Unique identifier for the document.
+#     :param collection_name: Name of the collection where documents will be stored.
+#     :param bucket_name: S3 bucket name where the file is located.
+#     :return: Vector store instance or False in case of failure.
+#     """
+    load_file_data = get_loader(file_path)  # Use the correct file path here
+    data = load_file_data.extract_docs(chunk_size=512, overlap_chunk=100)
+    
+    vector_store = VectorStorePostgresVector(
+        embeddings=huggingface_embeddings,
+    )
+    vector_store.store_docs_to_collection(docs= data['pages'], document_id=document_id, document_path=file_path)            
+    return True
+
+
+
+
 # import base64
 # import json
 # import logging

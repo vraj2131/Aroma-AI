@@ -34,4 +34,6 @@ class CRUDUser:
             return {'success': False, 'msg': 'Company Email already Exists'}
         return {'success': True, 'msg': 'Company Email not Exists'}
     
+    def check_is_admin(self, db: Session, email: str) -> Optional[User]:
+        return db.query(User).filter(User.email == email, User.role == 'manager').first()
 user = CRUDUser()

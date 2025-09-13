@@ -4,3 +4,4 @@ from .Profile import ProfileResponse, ProfileUpdate
 from .token import TokenPayload
 from .order import OrderItemCreate, OrderCreate, OrderResponse, Menusearch, OrderStatus, GetOrders, MenuItemUpdate
 from .table import TableBooking, TableCancel, TableResponse
+from .document import UploadDocumentRequest, UploadDocumentResponse 

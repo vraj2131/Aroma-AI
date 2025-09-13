@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime, timedelta
 
-from bs4 import BeautifulSoup
 from pydantic import EmailStr
 # from sendgrid import SendGridAPIClient
 # from sendgrid.helpers.mail import Mail, Email, To, Content, HtmlContent
