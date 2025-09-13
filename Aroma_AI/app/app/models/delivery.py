@@ -21,6 +21,6 @@ class Delivery(Base):
     expected_time = Column(DateTime, nullable=True)
     actual_time = Column(DateTime, nullable=True)
 
-    order = relationship("Order", back_populates="delivery")
+    # order = relationship("Order", back_populates="delivery")
 
 

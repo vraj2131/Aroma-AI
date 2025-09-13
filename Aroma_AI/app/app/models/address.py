@@ -22,5 +22,5 @@ class Address(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    customer = relationship("Customer", back_populates="addresses")
+    # customer = relationship("Customer", back_populates="addresses")
 
