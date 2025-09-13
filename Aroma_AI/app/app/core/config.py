@@ -17,8 +17,8 @@ class Settings(BaseSettings):
     POSTGRES_USER: str = os.getenv("POSTGRES_USER")
     POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD")
     POSTGRES_DB: str = os.getenv("POSTGRES_DB")
-    SQLALCHEMY_DATABASE_URI: Optional[PostgresDsn] = os.getenv(
-        "SQLALCHEMY_DATABASE_URI")
+    POSTGRES_PORT: str = os.getenv("POSTGRES_PORT", "5432")
+    SQLALCHEMY_DATABASE_URI: Optional[PostgresDsn] = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_SERVER}:{POSTGRES_PORT}/{POSTGRES_DB}"
     
     @validator("SQLALCHEMY_DATABASE_URI", pre=True)
     def assemble_db_connection(cls, v: Optional[str], values: Dict[str, Any]) -> Any:
