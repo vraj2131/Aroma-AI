@@ -19,5 +19,7 @@ class Feedback(Base):
     comments = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    order = relationship("Order", back_populates="feedbacks")
+
     # order = relationship("Order", back_populates="feedback")
 

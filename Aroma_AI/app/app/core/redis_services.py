@@ -153,5 +153,47 @@ class RedisClient:
         except Exception as e:
             _logger.error(f"Error getting key '{key}' from Redis: {e}")
             return None
+        
+    def rpush(self, key: str, value: Any) -> int:
+        """
+        Push a value to the right of a Redis list.
+        """
+        try:
+            if not isinstance(value, str):
+                value = json.dumps(value)
+            result = self.redis_client.rpush(key, value)
+            _logger.debug(f"RPUSH key: {key} | value: {value}")
+            return result
+        except Exception as e:
+            _logger.error(f"Error RPUSH to key '{key}': {e}")
+            return 0
+
+    def lrange(self, key: str, start: int = 0, end: int = -1) -> list:
+        """
+        Get a range of values from a Redis list.
+        """
+        try:
+            values = self.redis_client.lrange(key, start, end)
+            parsed = []
+            for v in values:
+                try:
+                    parsed.append(json.loads(v))
+                except Exception:
+                    parsed.append(v)
+            return parsed
+        except Exception as e:
+            _logger.error(f"Error LRANGE from key '{key}': {e}")
+            return []
+
+    def expire(self, key: str, ttl: int) -> bool:
+        """
+        Set an expiration time (TTL) for a Redis key.
+        """
+        try:
+            return self.redis_client.expire(key, ttl)
+        except Exception as e:
+            _logger.error(f"Error setting expire for key '{key}': {e}")
+            return False
+
 
 redis_client = RedisClient()

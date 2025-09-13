@@ -14,4 +14,4 @@ class ChatData(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, index=True)
     
     # Relationships
-    user = relationship("User", back_populates="chats")
+    # user = relationship("User", back_populates="chats")

@@ -6,3 +6,4 @@ from .order import OrderItemCreate, OrderCreate, OrderResponse, Menusearch, Orde
 from .table import TableBooking, TableCancel, TableResponse
 from .document import UploadDocumentRequest, UploadDocumentResponse 
 from .feedback import FeedbackResponse, FeedbackBase, FeedbackCreate, FeedbackListResponse ,FeedbackOut, FeedbackUpdate
+from .chat import AskQna, QnaResponse, ContinueChatRequest

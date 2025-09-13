@@ -26,6 +26,13 @@ from app.models.user import User
 
 _logger = logging.getLogger(__name__)
 
+
+import uuid
+
+SESSION_TTL = 3600  # 1 hour
+
+
+
 class CRUDQna:
     def all_chat_history(self, user_id: str, db, all_chat=True) -> list:
         history_query = (
@@ -119,7 +126,7 @@ class CRUDQna:
             _logger.warning(f"Failed to store Q&A in Redis for key {redis_key}: {e}")
 
         try:
-            new_entry = ChatData(user_id=user_id,question=query, answer=answer)
+            new_entry = ChatData(user_id=user_id,question=query, answer=f"{answer}")
             db.add(new_entry)
             db.commit()
             db.refresh(new_entry)
@@ -133,36 +140,104 @@ class CRUDQna:
     async def ask_qna(self, db: Session, current_user, params) -> dict:
         try:
             if not params.query:
-                return {"success": False, "msg": "Query parameter is not provided", "data": None}
-            params = {"query":params.query, "isnew":params.isnew}
-            query = params.get("query")
+                return {
+                    "success": False,
+                    "msg": "Query parameter is not provided",
+                    "data": None
+                }
+            query = params.query
             normalized_query = query.translate(str.maketrans('', '', string.punctuation))
             normalized_query = normalized_query.strip().replace(" ", "").lower()
-
-            key_exists = redis_client.exists(normalized_query)
-            if key_exists:
-                answer = redis_client.get(normalized_query)       
+            if redis_client.exists(normalized_query):
+                answer = redis_client.get(normalized_query)
+                if isinstance(answer, bytes):
+                    answer = answer.decode("utf-8")
                 _logger.info(f"Cache hit for query: '{normalized_query}'")
                 return {
                     "success": True,
-                    "msg": "Existing response",
+                    "msg": "Fetched from cache",
                     "data": {
                         "answer": answer,
                         "type": "text",
                         "user_id": current_user.id,
                         "docs_details": [],
-                        "group_id": params.get("group_id"),
                         "quick_replies": []
-                    }}
-
+                    }
+                }
             history = self.get_user_chat_history(current_user.id, db)
-            # history = []
-            # TODO
-            user_id=current_user.id
-            final_answer = flow(params.get("query"))
-            self.store_user_qa(db,current_user.id, params.get("query"), final_answer, history)
+            final_answer = flow(query)
+            if isinstance(final_answer, dict) and "error" not in final_answer:
+                answer_text = json.dumps(final_answer, ensure_ascii=False)
+            else:
+                answer_text = str(final_answer)
+            self.store_user_qa(db, current_user.id, query, answer_text, history)
+            redis_client.set(normalized_query, answer_text)
+            return {
+                "success": True,
+                "msg": "Response generated",
+                "data": {
+                    "answer": answer_text,
+                    "type": "text",
+                    "user_id": current_user.id,
+                    "docs_details": [],
+                    "quick_replies": []
+                }
+            }
+
         except Exception as e:
             _logger.error(f"Error in ask_qna: {e}")
             return {"success": False, "msg": str(e), "data": None}
+    
+    def start_session(self, user_id, query):
+        session_id = str(uuid.uuid4())
+        state = flow(query)
+
+        # Session state Redis me save
+        redis_client.set(
+            f"session:{user_id}:{session_id}",
+            json.dumps(state),
+            ex=SESSION_TTL
+        )
+
+        # Empty chat history create karo
+        redis_client.delete(f"chat_history:{user_id}:{session_id}")
+        redis_client.rpush(
+            f"chat_history:{user_id}:{session_id}",
+            json.dumps({"query": query, "state": state})
+        )
+        redis_client.expire(f"chat_history:{user_id}:{session_id}", SESSION_TTL)
+
+        return session_id, state
+
+    def continue_session(self, user_id, session_id, query, user_input="", current_agent=None, step=1):
+        # Flow ke andar jao with current state
+        state = flow(query, user_input, current_agent, step)
+
+        # Update session current state
+        redis_client.set(
+            f"session:{user_id}:{session_id}",
+            json.dumps(state),
+            ex=SESSION_TTL
+        )
+
+        # Chat history me append karo
+        redis_client.rpush(
+            f"chat_history:{user_id}:{session_id}",
+            json.dumps({"query": query, "user_input": user_input, "state": state})
+        )
+        redis_client.expire(f"chat_history:{user_id}:{session_id}", SESSION_TTL)
+
+        return state
+
+    def get_session(self, user_id, session_id):
+        raw = redis_client.get(f"session:{user_id}:{session_id}")
+        if raw:
+            return json.loads(raw)
+        return None
+
+    def get_chat_history(self, user_id, session_id):
+        # Puri history list fetch karo
+        raw_list = redis_client.lrange(f"chat_history:{user_id}:{session_id}", 0, -1)
+        return [json.loads(item) for item in raw_list] if raw_list else []
             
 qna = CRUDQna()

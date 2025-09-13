@@ -105,65 +105,52 @@ def delivery_assignment(order_id, user_id):
     }
 
 
-def flow(query):
-    role = "Welcome_Agent"
-    # query = input("Customer: ")
+def flow(query, user_input=None, current_agent=None, step=0):
+    """
+    Stateless flow handler for API usage.
+    - query: starting query / prompt
+    - user_input: last user ka answer
+    - current_agent: kaunsa agent abhi active hai
+    - step: flow ka current step
+    """
+    if current_agent is None:
+        # Start of conversation
+        response = call_agent("Welcome_Agent", query)
+        return {
+            "agent": response.get("name"),
+            "task": response.get("prompt", ""),
+            "follow_up": response.get("follow_up", []),
+            "step": 1
+        }
 
-    response1 = call_agent(role, query)
+    elif current_agent == "Table_Allocation_Agent":
+        new_query = f"{query} | User answered: {user_input}"
+        response = call_agent("Table_Allocation_Agent", new_query)
+        return {
+            "agent": "Table_Allocation_Agent",
+            "data": response,
+            "follow_up": response.get("follow_up", []),
+            "step": step + 1
+        }
 
-    if "error" in response1:
-        print("[FATAL] Welcome Agent failed →", response1)
-        exit()
+    elif current_agent == "Order_Manager_Agent":
+        new_query = f"{query} | User answered: {user_input}"
+        response = call_agent("Order_Manager_Agent", new_query)
+        return {
+            "agent": "Order_Manager_Agent",
+            "data": response,
+            "follow_up": response.get("follow_up", []),
+            "step": step + 1
+        }
 
-    next_agent = response1.get("name", "").strip()
-    if not next_agent:
-        print("[ERROR] Welcome Agent did not return a valid 'name'. Full response:", response1)
-        exit()
-
-    print("Routing to:", next_agent)
-    print("Task:", response1.get("prompt", ""))
-    print("****************************************************")
-
-
-    if next_agent == "Table_Allocation_Agent":
-        table_response = handle_followups("Table_Allocation_Agent", response1.get("prompt", ""))
-        print("Final Response:", table_response)
-
-        order_response = handle_followups("Order_Manager_Agent", "Start taking order for this dine-in customer")
-        print("Order Response:", order_response)
-
-        feedback = input("Your task is completed. Please rate our services: ")
-        feedback_response = call_agent("Feedback_Agent", feedback)
-        print("Feedback Response:", feedback_response)
-
-
-    elif next_agent == "Order_Manager_Agent":
-        order_response = handle_followups("Order_Manager_Agent", response1.get("prompt", ""))
-        print("Order Response:", order_response)
-
-        # Delivery step added for takeaway
-        delivery_response = delivery_assignment(
-            order_response.get("order_details", {}).get("order_id", "NA"),
-            order_response.get("order_details", {}).get("user_id", "NA")
-        )
-        print("Delivery Response:", delivery_response)
-
-        feedback = input("Your takeaway order is completed. Please rate our services: ")
-        feedback_response = call_agent("Feedback_Agent", feedback)
-        print("Feedback Response:", feedback_response)
-
-
-    elif next_agent == "Online_Order_Agent":
-        order_response = handle_followups("Order_Manager_Agent", "Start taking online order")
-        print("Order Response:", order_response)
-
-        delivery_response = handle_followups("Delivery_Manager_Agent", "Arrange delivery for this order")
-        print("Delivery Response:", delivery_response)
-
-        feedback = input("Your online order & delivery are completed. Please rate our services: ")
-        feedback_response = call_agent("Feedback_Agent", feedback)
-        print("Feedback Response:", feedback_response)
+    elif current_agent == "Feedback_Agent":
+        response = call_agent("Feedback_Agent", user_input)
+        return {
+            "agent": "Feedback_Agent",
+            "data": response,
+            "follow_up": [],
+            "step": step + 1
+        }
 
     else:
-        print("[ERROR] Unknown routing:", next_agent)
-    return feedback_response
+        return {"error": f"Unknown agent {current_agent}"}

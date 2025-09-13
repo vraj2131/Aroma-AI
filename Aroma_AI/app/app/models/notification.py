@@ -16,5 +16,5 @@ class Notification(Base):
     message = Column(String(255))
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    order = relationship("Order", back_populates="notifications")
+    # order = relationship("Order", back_populates="notifications")
 

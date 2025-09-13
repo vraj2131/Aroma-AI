@@ -11,12 +11,8 @@ import logging
 from app.loader.utils import get_loader
 from app.vector_store.pgvector_langchain import VectorStorePostgresVector
 from app.embeddings.embedding import huggingface_embeddings
-from app.utils.doc_summary import get_summary_data
-from app.utils.chat_services import chat_obj
 from app.core.config import settings
-from app.crud.crud_chat import qna
-from app.db.session import get_db
-from app.models.chat import ChatData
+
 
 _logger = logging.getLogger(__name__)
 celery = Celery('tasks', broker=f'redis://{settings.REDIS_HOST}:6379/{settings.REDIS_DB}',backend=f'redis://{settings.REDIS_HOST}:6379/{settings.REDIS_DB}')
