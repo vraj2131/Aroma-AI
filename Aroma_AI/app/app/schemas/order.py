@@ -10,6 +10,7 @@ class OrderItemCreate(BaseModel):
 
 
 class OrderCreate(BaseModel):
+    table_id: int
     order_type: str   # dine_in / take_away / delivery
     items: List[OrderItemCreate]
 

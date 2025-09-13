@@ -96,7 +96,7 @@ class CRUDLogin:
         user_id = self.check_valid_user(db, params.email)
         if user_id:
             otp = self.generate_otp(db, params)
-            return {'success': True, 'msg': 'Login Generate OTP Mail Sent', 'data': {'otp': otp.get('data').get('otp')}}
+            return {'success': True, 'msg': f'Login Generate OTP Mail Sent {otp.get('data').get('otp')}', 'data': {'otp': otp.get('data').get('otp')}}
         password_hash = get_password_hash("test")
         user_obj = User(username=params.email, password_hash=password_hash, 
                         role="customer", status="active")
