@@ -19,6 +19,9 @@ class User(Base):
     verified = Column(Boolean, default=False)
     status = Column(String, index=True)
 
+    # waiting_list = relationship("waiting_list", backref="user")
+
+
 class Customer(Base):
     __tablename__ = "customers"
 
@@ -29,11 +32,11 @@ class Customer(Base):
     phone = Column(String(20), unique=True, nullable=False)
     email = Column(String(150), unique=True)
     loyalty_points = Column(Integer, default=0)
-    status = Column(String, index=True)
+    status = Column(String, index=True) #
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    addresses = relationship("Address", back_populates="customer", cascade="all, delete-orphan")
+    # addresses = relationship("Address", back_populates="customer", cascade="all, delete-orphan")
 
 class UserOTP(Base):
     __tablename__ = 'user_otp'

@@ -5,7 +5,7 @@ __pycache__/
 sklearndb/
 app/app/files/
 app/app/credentials.json
-app/alembic/versions
+Aroma_AI/app/alembic/versions
 venv
 env/
 celerybeat-schedule

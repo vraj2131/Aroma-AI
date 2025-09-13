@@ -6,6 +6,7 @@ from app.models.address import Address # noqa
 from app.models.delivery import Delivery # noqa
 from app.models.feedback import Feedback # noqa
 from app.models.notification import Notification # noqa
-from app.models.order import Order,OrderItem # noqa
+from app.models.order import Order,OrderItem, MenuItem # noqa
 from app.models.reward import Reward # noqa
 from app.models.table import Table # noqa
+from app.models.waitingList import WaitingList #noqa

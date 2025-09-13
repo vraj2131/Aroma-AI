@@ -13,7 +13,7 @@ class Reward(Base):
     __tablename__ = "rewards"
 
     id = Column(Integer, primary_key=True, index=True)
-    customer_id = Column(Integer, ForeignKey("customers.id"))
+    user_id = Column(Integer, ForeignKey("users.id"))
     type = Column(String(50))  # discount / subscription / coupon
     points = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)

@@ -12,10 +12,14 @@ class Table(Base):
     __tablename__ = "tables"
 
     id = Column(Integer, primary_key=True, index=True)
+    User_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     number = Column(Integer, unique=True)
     status = Column(String(50), default="available")  # available / occupied / cleaning
     seats = Column(Integer)
+    book_date_time = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    orders = relationship("Order", back_populates="table")
+    # orders = relationship("User", back_populates="users")
 
 
