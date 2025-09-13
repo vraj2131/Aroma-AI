@@ -48,5 +48,6 @@ class Settings(BaseSettings):
     GOOGLE_DRIVE_CREDENTIAL_BUCKET_NAME : str = os.getenv("GOOGLE_DRIVE_CREDENTIAL_BUCKET_NAME")
     GOOGLE_DRIVE_KEYS_BASE_FOLDER : str = os.getenv("GOOGLE_DRIVE_KEYS_BASE_FOLDER")
     DRIVE_READ_ONLY_ACCESS = 'https://www.googleapis.com/auth/drive.readonly'
+    VECTOR_CONNECTION_STRING: str = os.getenv("VECTOR_CONNECTION_STRING","postgresql://postgres:postgres@192.168.0.169:5432/goose_ai_db")
 
 settings = Settings()
