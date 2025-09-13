@@ -42,4 +42,5 @@ dependencies = [
     "openpyxl>=3.1.5",
     "pydantic[email]>=2.11.7",
     "python-multipart>=0.0.20",
+    "passlib>=1.7.4",
 ]
