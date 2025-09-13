@@ -81,3 +81,29 @@ def get_menu_items(*, current_user: User = Depends(deps.get_current_active_user)
     except Exception as e:
         _logger.error("Exception in get_menu_items: %s", e)
         return JSONResponse(status_code=400, content={"success": False, "message": str(e)})
+    
+@router.put("/update-menu-item/", response_model=schemas.OrderResponse)
+def update_menu_item(
+    *, 
+    current_user: User = Depends(deps.get_current_active_user),
+    db: Session = Depends(deps.get_db),
+    params: schemas.MenuItemUpdate
+):
+    try:
+        _logger.info(f"Update MenuItem: Params: {params}")
+        response = crud.order.update_menu_item(db, current_user, params)
+        _logger.info(f"Update MenuItem Response: {response}")
+        return JSONResponse(
+            status_code=200 if response.get("success") else 400,
+            content={
+                "success": response.get("success"),
+                "message": response.get("msg"),
+                "data": response.get("data"),
+            }
+        )
+    except Exception as e:
+        _logger.error(f"Exception in Update MenuItem: {e}")
+        return JSONResponse(
+            status_code=400,
+            content={"success": False, "message": str(e)},
+        )
