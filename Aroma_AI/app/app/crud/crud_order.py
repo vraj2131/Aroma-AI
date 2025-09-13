@@ -135,18 +135,13 @@ class CRUDOrder:
 
         
     def fetch_orders(self, db: Session, user: User, params) -> dict:
-        """
-        Fetch orders with items using join to avoid N+1 queries, supports filters and pagination
-        """
         try:
             page = getattr(params, "page", 1) or 1
             limit = getattr(params, "limit", 10) or 10
 
             query = db.query(Order).options(joinedload(Order.items))  # join with OrderItem
-
             if user.role == "customer":
                 query = query.filter(Order.user_id == user.id)
-
             if getattr(params, "order_id", None):
                 query = query.filter(Order.id == params.order_id)
             if getattr(params, "order_status", None):

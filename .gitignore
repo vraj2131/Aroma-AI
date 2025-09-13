@@ -13,3 +13,4 @@ sentence-transformers-cache/
 celerybeat-schedule.db
 app/app/google-drive-keys
 files/
+mcp/

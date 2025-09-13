@@ -1,6 +1,8 @@
 import shutil
 from fastapi import UploadFile, File
 from logging import getLogger
+import os
+import shutil
 
 from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse
@@ -18,9 +20,10 @@ _logger = getLogger("Document Logger")
 
 
 @router.post('/upload/', response_model=schemas.UploadDocumentResponse)
-def document_upload(file: UploadFile = File(...),current_user: User = Depends(deps.get_current_admin) ,db: Session = Depends(deps.get_db),) -> JSONResponse:
+def document_upload(file: UploadFile = File(...),current_user: User = Depends(deps.get_current_active_user) ,db: Session = Depends(deps.get_db),) -> JSONResponse:
     try:
         _logger.info("Document upload started for company")
+        os.makedirs("./files", exist_ok=True)
         path = f"./files/{file.filename}"
         with open(path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)

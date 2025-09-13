@@ -20,6 +20,7 @@ class Order(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    feedbacks = relationship("Feedback", back_populates="order", cascade="all, delete-orphan")
     items = relationship("OrderItem", backref="order", cascade="all, delete-orphan")
     # customer = relationship("User", backref="order")
     # table = relationship("Table", backref="order")

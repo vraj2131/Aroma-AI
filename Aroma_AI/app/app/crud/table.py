@@ -60,7 +60,7 @@ class CRUDTable:
             return {'success': False, 'msg': 'Customer profile not found'}
         query = db.query(Table)
         if user.role == "customer":
-            query = query.filter(Table.status == "available")
+            query = query.filter(Table.User_id == user.id )
         tables = query.all()
         if not tables:
             return {"success": False, "msg": "No tables found"}
