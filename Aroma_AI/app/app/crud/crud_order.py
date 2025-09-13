@@ -7,6 +7,7 @@ from app.models.order import Order, OrderItem, MenuItem
 from app.models.user import Customer, User
 from app.models.table import Table
 from app.models.status_base import StatusEnum
+from collections import defaultdict
 
 _logger = logging.getLogger(__name__)
 
@@ -211,31 +212,64 @@ class CRUDOrder:
         if not customer:
             return {"success": False, "msg": "Customer profile not found", "data": []}
         try:
-            query = db.query(MenuItem).filter(MenuItem.is_available == True)
+            query = db.query(MenuItem)
+            if user.role == "customer":
+                query = query.filter(MenuItem.is_available == True)
             if params.item_type:
                 query = query.filter(MenuItem.item_type == params.item_type)
-
             if params.item_name:
                 query = query.filter(MenuItem.item_name.ilike(f"%{params.item_name}%"))
+
             items = query.all()
-            items_data = [
-                {
+            grouped_items = defaultdict(list)
+            for item in items:
+                grouped_items[item.item_type].append({
                     "id": item.id,
-                    "item_type": item.item_type,
                     "item_name": item.item_name,
                     "description": item.description,
                     "price": item.price,
                     "is_available": item.is_available,
-                }
-                for item in items
-            ]
+                })
+            fixed_order = ["starter", "main_course", "beverage", "dessert"]
+            ordered_items = []
+            for t in fixed_order:
+                if t in grouped_items:
+                    ordered_items.append({"item_type": t, "items": grouped_items[t]})
+
             return {
                 "success": True,
                 "msg": "Menu items fetched successfully",
-                "data": items_data,
+                "data": ordered_items,
             }
         except Exception as e:
             return {"success": False, "msg": str(e), "data": []}
+        
+    def update_menu_item(self, db: Session, user: User, params) -> dict:
+        try:
+            if user.role == "customer":
+                return {"success": False, "msg": "No Access"}
+            item = db.query(MenuItem).filter(MenuItem.id == params.id).first()
+            if not item:
+                return {"success": False, "msg": "Menu item not found", "data": {}}
+
+            if params.price is not None:
+                item.price = params.price
+            if params.is_available is not None:
+                item.is_available = params.is_available
+            db.commit()
+            db.refresh(item)
+            data = {
+                "id": item.id,
+                "item_type": item.item_type,
+                "item_name": item.item_name,
+                "description": item.description,
+                "price": item.price,
+                "is_available": item.is_available,
+            }
+
+            return {"success": True, "msg": "Menu item updated successfully", "data": data}
+        except Exception as e:
+            return {"success": False, "msg": str(e), "data": {}}
 
 
 order = CRUDOrder()

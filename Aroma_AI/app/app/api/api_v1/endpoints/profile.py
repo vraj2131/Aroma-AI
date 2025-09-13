@@ -33,3 +33,24 @@ def update_profile(*, current_user: User = Depends(deps.get_current_active_user)
             status_code=400,
             content={'success': False, "message": str(e)}
         )
+@router.get("/fetch-profile/", response_model=schemas.ProfileResponse)
+def fetch_profile(*, current_user: User = Depends(deps.get_current_active_user),
+                  db: Session = Depends(deps.get_db)):
+    try:
+        _logger.info(f"Fetch Profile for user_id: {current_user.id}")
+        response = crud.profile.fetch_profile(db, current_user)
+        _logger.info(f"Fetch Profile Response: {response}")
+        return JSONResponse(
+            status_code=200 if response.get("success") else 400,
+            content={
+                "success": response.get("success"),
+                "message": response.get("msg"),
+                "data": response.get("data")
+            }
+        )
+    except Exception as e:
+        _logger.error(f"Exception in Fetch Profile: {e}")
+        return JSONResponse(
+            status_code=400,
+            content={"success": False, "message": str(e)}
+        )
