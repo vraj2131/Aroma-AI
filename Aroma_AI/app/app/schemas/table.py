@@ -13,3 +13,4 @@ class TableResponse(BaseModel):
     success: bool
     message: str
     table_id: Optional[int] = None
+    
