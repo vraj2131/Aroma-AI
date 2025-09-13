@@ -31,6 +31,11 @@ class Menusearch(BaseModel):
     item_type: Optional[str] = None
     item_name: Optional[str] = None
 
+class MenuItemUpdate(BaseModel):
+    id: int
+    price: Optional[float]
+    is_available: Optional[bool]
+
 
 class OrderResponse(BaseModel):
     success: bool
