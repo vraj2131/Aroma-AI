@@ -1,9 +1,10 @@
 import os
 from typing import Any, Dict, List, Optional, Union
-
+from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
-from pydantic import (AnyHttpUrl, BaseSettings, EmailStr, HttpUrl, PostgresDsn,
+from pydantic import (AnyHttpUrl, EmailStr, HttpUrl, PostgresDsn,
                       validator)
+from typing import ClassVar
 
 load_dotenv(verbose=True)
 
@@ -18,7 +19,8 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD")
     POSTGRES_DB: str = os.getenv("POSTGRES_DB")
     POSTGRES_PORT: str = os.getenv("POSTGRES_PORT", "5432")
-    SQLALCHEMY_DATABASE_URI: Optional[PostgresDsn] = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_SERVER}:{POSTGRES_PORT}/{POSTGRES_DB}"
+    SQLALCHEMY_DATABASE_URI: str = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_SERVER}:{POSTGRES_PORT}/{POSTGRES_DB}"
+
     
     @validator("SQLALCHEMY_DATABASE_URI", pre=True)
     def assemble_db_connection(cls, v: Optional[str], values: Dict[str, Any]) -> Any:
@@ -45,8 +47,9 @@ class Settings(BaseSettings):
         'Transcript': {'srt'},
         'Unstructured File': {'txt'}
     }
-    GOOGLE_DRIVE_CREDENTIAL_BUCKET_NAME : str = os.getenv("GOOGLE_DRIVE_CREDENTIAL_BUCKET_NAME")
-    GOOGLE_DRIVE_KEYS_BASE_FOLDER : str = os.getenv("GOOGLE_DRIVE_KEYS_BASE_FOLDER")
-    DRIVE_READ_ONLY_ACCESS = 'https://www.googleapis.com/auth/drive.readonly'
+    # GOOGLE_DRIVE_CREDENTIAL_BUCKET_NAME : str = os.getenv("GOOGLE_DRIVE_CREDENTIAL_BUCKET_NAME")
+    # GOOGLE_DRIVE_KEYS_BASE_FOLDER : str = os.getenv("GOOGLE_DRIVE_KEYS_BASE_FOLDER")
+    # DRIVE_READ_ONLY_ACCESS = 'https://www.googleapis.com/auth/drive.readonly'
+    VECTOR_CONNECTION_STRING: ClassVar[str] = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_SERVER}:{POSTGRES_PORT}/{POSTGRES_DB}"
 
 settings = Settings()
