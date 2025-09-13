@@ -24,6 +24,7 @@ class CRUDOrder:
                 db.query(Order)
                 .filter(
                     Order.user_id == user.id,
+                    Order.table_id == params.table_id,
                     func.date(Order.created_at) == today,
                     Order.status.in_(["pending", "confirmed", "preparing", "completed"]),
                     Order.order_type != "delivery",
@@ -53,7 +54,7 @@ class CRUDOrder:
                     "msg": "Items added to existing unpaid order",
                     "data": {"order_id": existing_order.id}
                 }
-            table = db.query(Table).filter(Table.User_id == user.id).first()
+            table = db.query(Table).filter(Table.id == params.table_id, Table.User_id == user.id).first()
             if not table and params.order_type == "dine_in":
                 return {'success': False, 'msg': 'Table not found'}
             new_order = Order(
