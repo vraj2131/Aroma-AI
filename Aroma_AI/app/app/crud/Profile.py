@@ -76,6 +76,7 @@ class CRUDProfile:
             ]
 
             data = {
+                "user_id": customer.user_id,
                 "full_name": customer.full_name,
                 "phone": customer.phone,
                 "email": customer.email,

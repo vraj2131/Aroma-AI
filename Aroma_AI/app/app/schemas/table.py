@@ -10,6 +10,9 @@ class TableCancel(BaseModel):
     table_id: int
     status: Optional[str]
 
+class TableFetch(BaseModel):
+    status: Optional[str]
+
 class TableResponse(BaseModel):
     success: bool
     message: str

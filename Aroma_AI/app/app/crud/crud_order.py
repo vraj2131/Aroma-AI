@@ -21,6 +21,38 @@ class CRUDOrder:
             return {'success': False, 'msg': 'Customer profile not found'}
         try:
             today = datetime.utcnow().date()
+            if params.order_type == "delivery":
+                new_order = Order(
+                    user_id=user.id,
+                    table_id=None,
+                    order_type="delivery",
+                    status="pending",
+                    payment_status="unpaid",
+                    created_at=datetime.utcnow(),
+                    updated_at=datetime.utcnow(),
+                )
+                db.add(new_order)
+                db.flush()
+                for item in params.items:
+                    menu_item = db.query(MenuItem).filter(MenuItem.id == item.menu_item_id).first()
+                    if not menu_item:
+                        return {"success": False, "msg": f"Menu item {item.menu_item_id} not found"}
+                    new_order_item = OrderItem(
+                        order_id=new_order.id,
+                        item_type=menu_item.item_type,
+                        item_name=menu_item.item_name,
+                        customization=item.customization,
+                        quantity=item.quantity,
+                        price=menu_item.price * item.quantity
+                    )
+                    db.add(new_order_item)
+                db.commit()
+                db.refresh(new_order)
+                return {
+                    "success": True,
+                    "msg": "Delivery order placed successfully",
+                    "data": {"order_id": new_order.id}
+                }
             existing_order = (
                 db.query(Order)
                 .filter(
@@ -111,12 +143,15 @@ class CRUDOrder:
                 if order.status in ["preparing", "completed"]:
                     return {"success": False, "msg": f"Order cannot be cancelled once it's {order.status}"}
             allowed_statuses = ["pending", "confirmed", "preparing", "completed", "cancelled"]
-            if params.status and params.status not in allowed_statuses:
-                return {"success": False, "msg": "Invalid status value"}
-            if params.status:
-                order.status = params.status
+            if params.status and params.status in allowed_statuses:
+                # return {"success": False, "msg": "Invalid status value"}
+                if params.status:
+                    order.status = params.status
+                    db.commit()
+
             if params.payment_status:
                 order.payment_status = params.payment_status
+                db.commit()
             if order.order_type=="delivery" and params.status == "completed":
                 print("in completed")
                 user = db.query(User).filter(
@@ -155,7 +190,13 @@ class CRUDOrder:
             page = getattr(params, "page", 1) or 1
             limit = getattr(params, "limit", 10) or 10
 
-            query = db.query(Order).options(joinedload(Order.items))  # join with OrderItem
+            query = (
+                db.query(Order)
+                .options(
+                    joinedload(Order.items),  
+                    joinedload(Order.delivery)
+                )
+            )
             if user.role == "customer":
                 query = query.filter(Order.user_id == user.id)
             if getattr(params, "order_id", None):
@@ -190,8 +231,20 @@ class CRUDOrder:
                         "quantity": item.quantity,
                         "price": item.price
                     }
-                    for item in order.items  # use relationship name 'items'
+                    for item in order.items
                 ]
+
+                delivery_data = None
+                if order.delivery:
+                    delivery_data = {
+                        "delivery_id": order.delivery.id,
+                        "delivery_partner": order.delivery.user_id,
+                        "delivery_address": order.delivery.address_id,
+                        "delivery_status": order.delivery.delivery_status,
+                        "expected_time": order.delivery.expected_time.isoformat() if order.delivery.expected_time else None,
+                        "actual_time": order.delivery.actual_time.isoformat() if order.delivery.actual_time else None,
+                    }
+
                 order_list.append({
                     "order_id": order.id,
                     "order_type": order.order_type,
@@ -200,7 +253,8 @@ class CRUDOrder:
                     "table_id": order.table_id,
                     "created_at": order.created_at.isoformat() if order.created_at else None,
                     "updated_at": order.updated_at.isoformat() if order.updated_at else None,
-                    "items": items
+                    "items": items,
+                    "delivery": delivery_data
                 })
             return {
                 "success": True,
