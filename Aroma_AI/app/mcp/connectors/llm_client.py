@@ -4,7 +4,7 @@ import json
 
 client = Groq(api_key="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")
 
-def llm_call(system_prompt, user_prompt, role, model, max_tokens, schema, temp=0):
+def llm_call(system_prompt, user_prompt, role, model, max_tokens, schema,Tool_context, temp=0):
     """Generic LLM call with enforced JSON schema and safe error handling."""
     try:
         chat_completion = client.chat.completions.create(
@@ -15,6 +15,7 @@ def llm_call(system_prompt, user_prompt, role, model, max_tokens, schema, temp=0
                     "content": f"You are a {role}. {user_prompt}. "
                                f"Ensure JSON strictly matches this schema: {schema}. "
                                f"No extra keys, no deviations."
+                               f"you can have this for context {Tool_context}"
                 }
             ],
             model=model,

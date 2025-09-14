@@ -1,6 +1,7 @@
 import json
 from ..connectors.llm_client import llm_call
 from mcp.prompts.prompt_config import PROMPT_CONFIG
+from mcp.tools import get_tool_info
 
 def manager_agent(user_message: str, state: dict = None, history: list = None) -> dict:
     """LLM router with conversation history context."""
@@ -19,6 +20,7 @@ def manager_agent(user_message: str, state: dict = None, history: list = None) -
         model=config["model"],
         max_tokens=config["max_tokens"],
         schema=config["schema"],
+        Tool_context=get_tool_info("Manager_Agent")
     )
 
     if isinstance(response, str):

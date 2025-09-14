@@ -1,6 +1,7 @@
 import json
 from ..connectors.llm_client import llm_call
 from mcp.prompts.prompt_config import PROMPT_CONFIG
+from mcp.tools import get_tool_info
 
 
 def feedback_agent(feedback_text: str):
@@ -8,6 +9,7 @@ def feedback_agent(feedback_text: str):
     Feedback Agent: collects customer feedback and sentiment.
     Fetches config from PROMPT_CONFIG.
     """
+    tool_context=get_tool_info("Feedback_Agent")
 
     config = PROMPT_CONFIG.get("Feedback_Agent", {})
     system_prompt = config.get("prompt", "")
@@ -23,6 +25,8 @@ def feedback_agent(feedback_text: str):
         model=model,
         max_tokens=max_tokens,
         schema=schema,
+        Tool_context=tool_context,
+
     )
 
     try:

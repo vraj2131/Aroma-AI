@@ -76,7 +76,7 @@ class CRUDQna:
             past_data = redis_client.get(redis_key_today)
             if past_data:
                 history = json.loads(past_data)
-                value=redis_client.get("goose_ai_extra_config").get("greeting_history_count", 8)
+                value=8
                 return history[-(int(value)):] if len(history) >= int(value) else history
             _logger.info(f"Redis key not found for today's chat: {redis_key_today}")
             redis_client.delete(redis_key_yesterday)
@@ -84,29 +84,28 @@ class CRUDQna:
             _logger.warning(f"Redis error while fetching history for {redis_key_today}: {e}")
 
         # Fallback: Fetch from DB
-        try:
-            # QnA = Base.classes.goose_chat_data
-            history_db = (
-                db.query(ChatData)
-                .filter(ChatData.user_id == user_id)
-                .order_by(ChatData.created_at.asc())
-                .limit(3)
-                .all()
-            )
-            for row in history_db:
-                history.extend([
-                    {"role": "user", "content": row.question},
-                    {"role": "assistant", "content": row.answer}
-                ])
+        # try:
+        #     history_db = (
+        #         db.query(ChatData)
+        #         .filter(ChatData.user_id == user_id)
+        #         .order_by(ChatData.created_at.asc())
+        #         .limit(8)
+        #         .all()
+        #     )
+        #     for row in history_db:
+        #         history.extend([
+        #             {"role": "user", "content": row.question},
+        #             {"role": "assistant", "content": row.answer}
+        #         ])
 
-            try:
-                redis_client.set(redis_key_today, json.dumps(history))
-                _logger.info(f"Stored chat history to Redis: {redis_key_today}")
-            except Exception as e:
-                _logger.warning(f"Redis write failed for key {redis_key_today}: {e}")
+        #     try:
+        #         redis_client.set(redis_key_today, json.dumps(history))
+        #         _logger.info(f"Stored chat history to Redis: {redis_key_today}")
+        #     except Exception as e:
+        #         _logger.warning(f"Redis write failed for key {redis_key_today}: {e}")
 
-        except Exception as e:
-            _logger.error(f"Database error fetching chat history for user {user_id}: {e}")
+        # except Exception as e:
+        #     _logger.error(f"Database error fetching chat history for user {user_id}: {e}")
         return history
 
     def store_user_qa(self, db: Session, user_id: str, query: str, answer) -> None:
@@ -151,15 +150,15 @@ class CRUDQna:
         except Exception as e:
             _logger.warning(f"Failed to write Q&A to Redis for key {redis_key}: {e}")
             # Store in DB
-        try:
-            new_entry = ChatData(user_id=user_id,question=query, answer=f"{answer}")
-            db.add(new_entry)
-            db.commit()
-            db.refresh(new_entry)
-            _logger.info(f"Stored Q&A in DB for user {user_id}, entry_id={new_entry.id}")
-        except Exception as e:
-            db.rollback()
-            _logger.error(f"Failed to store Q&A in DB for user {user_id}: {e}")
+        # try:
+        #     new_entry = ChatData(user_id=user_id,question=query, answer=f"{answer}")
+        #     db.add(new_entry)
+        #     db.commit()
+        #     db.refresh(new_entry)
+        #     _logger.info(f"Stored Q&A in DB for user {user_id}, entry_id={new_entry.id}")
+        # except Exception as e:
+        #     db.rollback()
+        #     _logger.error(f"Failed to store Q&A in DB for user {user_id}: {e}")
 
 
     async def ask_qna(self, db: Session, current_user, params) -> dict:
@@ -196,8 +195,8 @@ class CRUDQna:
         else:
             answer_text = run_flow(current_user.id, history, db)
         # final_answer = str(final_answer)
-        self.store_user_qa(db, current_user.id, query, answer_text)
-        redis_client.set(normalized_query, answer_text)
+        # self.store_user_qa(db, current_user.id, query, answer_text)
+        # redis_client.set(normalized_query, answer_text)
         return {
             "success": True,
             "msg": "Response generated",
@@ -226,18 +225,18 @@ class CRUDQna:
         )
 
         # Empty chat history create karo
-        redis_client.delete(f"chat_history:{user_id}:{session_id}")
+        redis_client.delete(f"chat_history:{user_id}")
         redis_client.rpush(
-            f"chat_history:{user_id}:{session_id}",
+            f"chat_history:{user_id}",
             json.dumps({"query": query, "state": state})
         )
-        redis_client.expire(f"chat_history:{user_id}:{session_id}", SESSION_TTL)
+        redis_client.expire(f"chat_history:{user_id}", SESSION_TTL)
 
         return session_id, state
 
     def continue_session(self, user_id, session_id, query, user_input="", current_agent=None, step=1):
         # Flow ke andar jao with current state
-        state = flow(query, user_input, current_agent, step)
+        state = run_flow(query, user_input, current_agent, step)
 
         # Update session current state
         redis_client.set(
@@ -248,22 +247,22 @@ class CRUDQna:
 
         # Chat history me append karo
         redis_client.rpush(
-            f"chat_history:{user_id}:{session_id}",
+            f"chat_history:{user_id}",
             json.dumps({"query": query, "user_input": user_input, "state": state})
         )
-        redis_client.expire(f"chat_history:{user_id}:{session_id}", SESSION_TTL)
+        redis_client.expire(f"chat_history:{user_id}", SESSION_TTL)
 
         return state
 
     def get_session(self, user_id, session_id):
-        raw = redis_client.get(f"session:{user_id}:{session_id}")
+        raw = redis_client.get(f"session:{user_id}")
         if raw:
             return json.loads(raw)
         return None
 
     def get_chat_history(self, user_id, session_id):
         # Puri history list fetch karo
-        raw_list = redis_client.lrange(f"chat_history:{user_id}:{session_id}", 0, -1)
+        raw_list = redis_client.lrange(f"chat_history:{user_id}", 0, -1)
         return [json.loads(item) for item in raw_list] if raw_list else []
             
 qna = CRUDQna()

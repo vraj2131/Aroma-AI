@@ -1,6 +1,7 @@
 import json
 from ..connectors.llm_client import llm_call
 from mcp.prompts.prompt_config import PROMPT_CONFIG
+from mcp.tools import get_tool_info
 
 
 def order_manager_agent(task_prompt: str):
@@ -8,6 +9,7 @@ def order_manager_agent(task_prompt: str):
     Order Manager Agent: helps the customer place their food order.
     Fetches config from PROMPT_CONFIG.
     """
+    tool_context=get_tool_info("Order_Manager_Agent")
 
     config = PROMPT_CONFIG.get("Order_Manager_Agent", {})
     system_prompt = config.get("prompt", "")
@@ -25,6 +27,8 @@ def order_manager_agent(task_prompt: str):
         model=model,
         max_tokens=max_tokens,
         schema=schema,
+        Tool_context=tool_context,
+
     )
 
     try:

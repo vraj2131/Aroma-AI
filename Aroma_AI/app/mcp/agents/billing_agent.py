@@ -1,4 +1,5 @@
 import json
+from mcp.tools import get_tool_info
 from ..connectors.llm_client import llm_call
 from mcp.prompts.prompt_config import PROMPT_CONFIG
 
@@ -8,7 +9,7 @@ def billing_agent(task_prompt: str):
     Billing Agent: generates bill details using LLM.
     Fetches config from PROMPT_CONFIG.
     """
-
+    tool_context=get_tool_info("Billing_Agent")
     config = PROMPT_CONFIG.get("Billing_Agent", {})
     system_prompt = config.get("prompt", "")
     schema = config.get("schema", {})
@@ -23,6 +24,7 @@ def billing_agent(task_prompt: str):
         model=model,
         max_tokens=max_tokens,
         schema=schema,
+        Tool_context=tool_context,
     )
 
     try:

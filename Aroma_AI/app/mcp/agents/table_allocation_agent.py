@@ -1,6 +1,7 @@
 import json
 from ..connectors.llm_client import llm_call
 from mcp.prompts.prompt_config import PROMPT_CONFIG
+from mcp.tools import get_tool_info
 
 
 def table_allocation_agent(task_prompt: str):
@@ -14,6 +15,7 @@ def table_allocation_agent(task_prompt: str):
     schema = config.get("schema", {})
     model = config.get("model")
     max_tokens = config.get("max_tokens", 150)
+    tool_context=get_tool_info("Table_Allocation_Agent")
 
     # Call the LLM with schema validation
     response = llm_call(
@@ -23,6 +25,8 @@ def table_allocation_agent(task_prompt: str):
         model=model,
         max_tokens=max_tokens,
         schema=schema,
+        Tool_context=tool_context,
+
     )
     print('table agent response', response)
     # If response is already a dict, don't parse it again
