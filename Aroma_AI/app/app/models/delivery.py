@@ -15,8 +15,8 @@ class Delivery(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     order_id = Column(Integer, ForeignKey("orders.id"))
-    delivery_partner = Column(String(100))  # Zomato, Swiggy, In-house
-    delivery_address = Column(Text)
+    user_id = Column(Integer, ForeignKey("users.id"))  # Zomato, Swiggy, In-house
+    address_id = Column(Integer, ForeignKey("addresses.id"))
     delivery_status = Column(String(100))
     expected_time = Column(DateTime, nullable=True)
     actual_time = Column(DateTime, nullable=True)
