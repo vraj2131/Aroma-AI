@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.api_v1.endpoints import login, profile, order, document, table, feedback, chat
+from app.api.api_v1.endpoints import login, profile, order, document, table, feedback, chat, delivery
 
 api_router = APIRouter()
 api_router.include_router(login.router, prefix="/login", tags=["login"])
@@ -10,6 +10,7 @@ api_router.include_router(document.router, prefix="/document", tags=["document"]
 api_router.include_router(table.router, prefix="/table", tags=["table"])
 api_router.include_router(feedback.router, prefix="/feedback", tags=["feedback"])
 api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
+api_router.include_router(delivery.router, prefix="/delivery", tags=["delivery"])
 
 
 
