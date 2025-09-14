@@ -11,7 +11,7 @@ from app.db.base import Base
 from app.core.redis_services import redis_client
 # from app.vector_store.pgvector_llama_index import VectorStorePostgresVector
 # from app.embeddings.embedding import huggingface_embeddings
-from app.llms.scripts import flow
+from mcp.flows.orchestrator import run_flow
 # from app.models.user import Users,Company,UserTypesMaster, QnA, FAQ
 from app.models.chat import ChatData
 from app.models.user import User
@@ -109,22 +109,48 @@ class CRUDQna:
             _logger.error(f"Database error fetching chat history for user {user_id}: {e}")
         return history
 
-    def store_user_qa(self, db : Session, user_id: str, query: str, answer: str, history: list) -> None:
+    def store_user_qa(self, db: Session, user_id: str, query: str, answer) -> None:
         """
-        Store the new question-answer pair to Redis by appending to existing history.
+        Store the new question-answer pair to Redis + DB.
+        - Reads existing history from Redis.
+        - Appends new Q&A to it.
+        - Handles both string and structured (dict/list) answers.
         """
+
         today = date.today().isoformat()
-        redis_key = f"chat_history:{user_id}:{today}"
+        redis_key = f"chat_history:{user_id}"
+        # Step 1: Try to fetch and parse existing history
+        try:
+            cached_history = redis_client.get(redis_key)
+            if cached_history:
+                try:
+                    history = json.loads(cached_history)
+                    if not isinstance(history, list):
+                        _logger.warning(f"Invalid history format in Redis for key {redis_key}, resetting.")
+                        history = []
+                except json.JSONDecodeError:
+                    _logger.warning(f"Corrupted history in Redis for key {redis_key}, resetting.")
+                    history = []
+            else:
+                history = []
+        except Exception as e:
+            _logger.warning(f"Error reading Redis key {redis_key}: {e}")
+            history = []
+
+        if isinstance(answer, (dict, list)):
+            answer_to_store = json.dumps(answer)
+        else:
+            answer_to_store = str(answer)
         history.extend([
             {"role": "user", "content": query},
-            {"role": "assistant", "content": answer}
+            {"role": "assistant", "content": answer_to_store}
         ])
         try:
-            redis_client.set(redis_key, json.dumps(history))
-            _logger.info(f"Appended new Q&A to Redis for user {user_id}")
+            redis_client.set(redis_key, json.dumps(history), ex=60*60*3)
+            _logger.info(f"Stored Q&A in Redis for user {user_id}")
         except Exception as e:
-            _logger.warning(f"Failed to store Q&A in Redis for key {redis_key}: {e}")
-
+            _logger.warning(f"Failed to write Q&A to Redis for key {redis_key}: {e}")
+            # Store in DB
         try:
             new_entry = ChatData(user_id=user_id,question=query, answer=f"{answer}")
             db.add(new_entry)
@@ -136,6 +162,7 @@ class CRUDQna:
             _logger.error(f"Failed to store Q&A in DB for user {user_id}: {e}")
         finally:
             db.close()
+
 
     async def ask_qna(self, db: Session, current_user, params) -> dict:
         try:
@@ -165,11 +192,12 @@ class CRUDQna:
                     }
                 }
             history = self.get_user_chat_history(current_user.id, db)
-            final_answer = flow(query)
+            final_answer = run_flow(query)
             if isinstance(final_answer, dict) and "error" not in final_answer:
                 answer_text = json.dumps(final_answer, ensure_ascii=False)
             else:
-                answer_text = str(final_answer)
+                answer_text = run_flow(history)
+            # final_answer = str(final_answer)
             self.store_user_qa(db, current_user.id, query, answer_text, history)
             redis_client.set(normalized_query, answer_text)
             return {
