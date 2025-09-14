@@ -23,12 +23,12 @@ _logger = getLogger("Chat Logger")
 @router.post('/Message/', response_model=schemas.QnaResponse)
 async def chat_responce(*,db: Session = Depends(deps.get_db), params: schemas.AskQna,
                   current_user:User = Depends(deps.get_current_active_user)) -> JSONResponse:
-    try:
-        response = await crud.qna.ask_qna(db, current_user, params)
-        _logger.info("Ask Qna Response : %r" % response)
-        return JSONResponse(status_code=200 if response.get('success') else 400,
-                            content={'success': response.get('success'), "errormsg": response.get('msg'),
-                                        'data': response.get('data')})
-    except Exception as e:
-        _logger.error("Exception in Ask Qna: %s" % e)
-        return JSONResponse(status_code=400, content={'success': False, "errormsg": str(e)})
+    # try:
+    response = await crud.qna.ask_qna(db, current_user, params)
+    _logger.info("Ask Qna Response : %r" % response)
+    return JSONResponse(status_code=200 if response.get('success') else 400,
+                        content={'success': response.get('success'), "errormsg": response.get('msg'),
+                                    'data': response.get('data')})
+    # except Exception as e:
+    #     _logger.error("Exception in Ask Qna: %s" % e)
+    #     return JSONResponse(status_code=400, content={'success': False, "errormsg": str(e)})
