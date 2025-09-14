@@ -18,7 +18,7 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     verified = Column(Boolean, default=False)
     status = Column(String, index=True)
-
+    delivery_status= Column(String,index=True,nullable=True)
     # waiting_list = relationship("waiting_list", backref="user")
 
 
@@ -36,7 +36,7 @@ class Customer(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # addresses = relationship("Address", back_populates="customer", cascade="all, delete-orphan")
+    addresses = relationship("Address", backref="customers", cascade="all, delete-orphan")
 
 class UserOTP(Base):
     __tablename__ = 'user_otp'

@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 
 from app.models.order import Order, OrderItem, MenuItem
+from app.models.delivery import Delivery
 from app.models.user import Customer, User
 from app.models.table import Table
 from app.models.status_base import StatusEnum
@@ -112,7 +113,7 @@ class CRUDOrder:
                     quantity=item.quantity,
                     price=menu_item.price * item.quantity
                 )
-                db.add(new_order_item)
+                db.add(new_order_item) 
             db.commit()
             db.refresh(new_order)
             return {
@@ -151,6 +152,21 @@ class CRUDOrder:
             if params.payment_status:
                 order.payment_status = params.payment_status
                 db.commit()
+            if order.order_type=="delivery" and params.status == "completed":
+                print("in completed")
+                user = db.query(User).filter(
+                        User.role == 'delivery',
+                        User.delivery_status == 'available').first()
+                
+                delivery= Delivery(
+                    order_id=order.id,
+                    user_id=user.id if user else None,
+                    address_id=customer.addresses[0].id if customer.addresses else None,
+                    delivery_status="pending" if user else "waiting",
+                    expected_time=None,
+                    actual_time=None
+                )
+                db.add(delivery) 
             order.updated_at = datetime.utcnow()
             db.commit()
             db.refresh(order)
