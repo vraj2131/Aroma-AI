@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     SECRET_KEY: str = "s9dF8gH7jKl3Pq2R1tUvWxYz0!@#4bN6mQ"
     PROJECT_NAME: str = "AromaAI"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 3
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 4
     POSTGRES_SERVER: str = os.getenv("POSTGRES_SERVER")
     POSTGRES_USER: str = os.getenv("POSTGRES_USER")
     POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD")

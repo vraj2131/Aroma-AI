@@ -22,6 +22,7 @@ class Order(Base):
 
     feedbacks = relationship("Feedback", back_populates="order", cascade="all, delete-orphan")
     items = relationship("OrderItem", backref="order", cascade="all, delete-orphan")
+    delivery = relationship("Delivery", backref="order", uselist=False, cascade="all, delete-orphan")
     # customer = relationship("User", backref="order")
     # table = relationship("Table", backref="order")
     # items = relationship("OrderItem", backref="order", cascade="all, delete-orphan")

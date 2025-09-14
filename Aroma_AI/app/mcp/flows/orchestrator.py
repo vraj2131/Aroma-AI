@@ -10,9 +10,6 @@ from mcp.agents.feedback_agent import feedback_agent
 
 from app import crud  # <-- your CRUDQna instance
 
-
-
-# ---------------- STATE HANDLING ----------------
 def load_state(user_id):
     raw = redis_client.get(f"conversation_state:{user_id}")
     return json.loads(raw) if raw else {
@@ -30,33 +27,7 @@ def save_state(user_id, state):
         )
     except Exception as e:
         print(f"Redis save error: {e}")
-# def save_history(user_id, query, answer, db):
-#     """Save chat history in Redis + DB"""
-#     redis_key = f"chat_history:{user_id}"
-#     history = []
 
-#     # Load old
-#     past_data = redis_client.get(redis_key)
-#     if past_data:
-#         history = json.loads(past_data)
-
-#     # Append new
-#     history.append({"role": "user", "content": query})
-#     history.append({"role": "agent", "content": answer})
-
-#     # Save Redis with expiry
-#     redis_client.setex(redis_key, 60 * 60 * 3, json.dumps(history))
-
-#     # Save DB
-#     try:
-#         new_entry = ChatData(user_id=user_id, question=query, answer=answer)
-#         db.add(new_entry)
-#         db.commit()
-#     except Exception as e:
-#         db.rollback()
-#         print(f"DB error storing chat: {e}")
-
-# ---------------- MAIN ORCHESTRATION ----------------
 def run_flow(user_id: str, user_message: str, db):
     state = load_state(user_id)
     history = crud.qna.get_user_chat_history(user_id, db)

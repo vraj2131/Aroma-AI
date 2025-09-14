@@ -89,7 +89,7 @@ class CRUDQna:
             history_db = (
                 db.query(ChatData)
                 .filter(ChatData.user_id == user_id)
-                .order_by(ChatData.createdon.asc())
+                .order_by(ChatData.created_at.asc())
                 .limit(3)
                 .all()
             )
@@ -160,61 +160,59 @@ class CRUDQna:
         except Exception as e:
             db.rollback()
             _logger.error(f"Failed to store Q&A in DB for user {user_id}: {e}")
-        finally:
-            db.close()
 
 
     async def ask_qna(self, db: Session, current_user, params) -> dict:
-        try:
-            if not params.query:
-                return {
-                    "success": False,
-                    "msg": "Query parameter is not provided",
-                    "data": None
-                }
-            query = params.query
-            normalized_query = query.translate(str.maketrans('', '', string.punctuation))
-            normalized_query = normalized_query.strip().replace(" ", "").lower()
-            if redis_client.exists(normalized_query):
-                answer = redis_client.get(normalized_query)
-                if isinstance(answer, bytes):
-                    answer = answer.decode("utf-8")
-                _logger.info(f"Cache hit for query: '{normalized_query}'")
-                return {
-                    "success": True,
-                    "msg": "Fetched from cache",
-                    "data": {
-                        "answer": answer,
-                        "type": "text",
-                        "user_id": current_user.id,
-                        "docs_details": [],
-                        "quick_replies": []
-                    }
-                }
-            history = self.get_user_chat_history(current_user.id, db)
-            final_answer = run_flow(query)
-            if isinstance(final_answer, dict) and "error" not in final_answer:
-                answer_text = json.dumps(final_answer, ensure_ascii=False)
-            else:
-                answer_text = run_flow(history)
-            # final_answer = str(final_answer)
-            self.store_user_qa(db, current_user.id, query, answer_text, history)
-            redis_client.set(normalized_query, answer_text)
+        # try:
+        if not params.query:
+            return {
+                "success": False,
+                "msg": "Query parameter is not provided",
+                "data": None
+            }
+        query = params.query
+        normalized_query = query.translate(str.maketrans('', '', string.punctuation))
+        normalized_query = normalized_query.strip().replace(" ", "").lower()
+        if redis_client.exists(normalized_query):
+            answer = redis_client.get(normalized_query)
+            if isinstance(answer, bytes):
+                answer = answer.decode("utf-8")
+            _logger.info(f"Cache hit for query: '{normalized_query}'")
             return {
                 "success": True,
-                "msg": "Response generated",
+                "msg": "Fetched from cache",
                 "data": {
-                    "answer": answer_text,
+                    "answer": answer,
                     "type": "text",
                     "user_id": current_user.id,
                     "docs_details": [],
                     "quick_replies": []
                 }
             }
+        history = self.get_user_chat_history(current_user.id, db)
+        final_answer = run_flow(current_user.id, query, db)
+        if isinstance(final_answer, dict) and "error" not in final_answer:
+            answer_text = json.dumps(final_answer, ensure_ascii=False)
+        else:
+            answer_text = run_flow(current_user.id, history, db)
+        # final_answer = str(final_answer)
+        self.store_user_qa(db, current_user.id, query, answer_text)
+        redis_client.set(normalized_query, answer_text)
+        return {
+            "success": True,
+            "msg": "Response generated",
+            "data": {
+                "answer": answer_text,
+                "type": "text",
+                "user_id": current_user.id,
+                "docs_details": [],
+                "quick_replies": []
+            }
+        }
 
-        except Exception as e:
-            _logger.error(f"Error in ask_qna: {e}")
-            return {"success": False, "msg": str(e), "data": None}
+        # except Exception as e:
+        #     _logger.error(f"Error in ask_qna: {e}")
+        #     return {"success": False, "msg": str(e), "data": None}
     
     def start_session(self, user_id, query):
         session_id = str(uuid.uuid4())
